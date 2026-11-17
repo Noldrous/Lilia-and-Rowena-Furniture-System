@@ -1,0 +1,187 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Controllers;
+
+use App\Models\Product;
+use App\Models\User;
+use Library\Database;
+use Library\Exceptions\AppException;
+use Library\Exceptions\AuthenticationException;
+use Library\Exceptions\DatabaseException;
+use Library\Exceptions\ValidationException;
+
+/**
+ * Part 4: HomeControllers
+ * Handles Login, Logout, and Dashboard rendering in XAMPP / PHP.
+ *
+ * OOP PRINCIPLES APPLIED:
+ * - Encapsulation: Holds private references to Database, User, and Product models.
+ * - Polymorphism: Catches ValidationException, AuthenticationException, and DatabaseException
+ *   (all subclasses of AppException) and uses their polymorphic `toErrorPayload()` and
+ *   `getHttpStatusCode()` methods for consistent error responses.
+ */
+class HomeControllers
+{
+    private Database $db;
+    private User $userModel;
+    private Product $productModel;
+
+    public function __construct(?Database $db = null)
+    {
+        $this->db = $db ?? Database::getInstance();
+        $this->userModel = new User($this->db);
+        $this->productModel = new Product($this->db);
+    }
+
+    /**
+     * Render or process the Login page (`index.php` -> `views/login.php`).
+     */
+    public function login(): void
+    {
+        $error = null;
+        $fieldErrors = [];
+        $email = '';
+        $mode = strtolower(trim((string) ($_GET['mode'] ?? 'signin')));
+
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+            $email = trim((string) ($_POST['email'] ?? ''));
+            $password = (string) ($_POST['password'] ?? '');
+            $mode = strtolower(trim((string) ($_POST['mode'] ?? 'signin')));
+            $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
+                || str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json');
+
+            try {
+                if ($mode === 'register') {
+                    $authenticatedUser = $this->userModel->register([
+                        'fullName'    => trim((string) ($_POST['full_name'] ?? $_POST['fullName'] ?? '')),
+                        'email'       => $email,
+                        'password'    => $password,
+                        'phoneNumber' => trim((string) ($_POST['phone_number'] ?? $_POST['phoneNumber'] ?? '')),
+                        'address'     => trim((string) ($_POST['address'] ?? '')),
+                    ]);
+                } else {
+                    $authenticatedUser = $this->userModel->authenticate($email, $password, null);
+                }
+
+                if (session_status() === PHP_SESSION_ACTIVE) {
+                    @session_regenerate_id(true);
+                }
+                $_SESSION['user'] = $authenticatedUser;
+                $targetRole = strcasecmp((string) ($authenticatedUser['role'] ?? ''), 'Admin') === 0 ? 'admin' : 'client';
+
+                if (function_exists('setFlashMessage')) {
+                    if ($mode === 'register') {
+                        setFlashMessage(
+                            'success',
+                            'Account Created Successfully',
+                            'Welcome to Lillia and Rowena Furniture, ' . (string) ($authenticatedUser['fullName'] ?? 'Customer') . '!'
+                        );
+                    } else {
+                        setFlashMessage(
+                            'success',
+                            'Signed In Successfully',
+                            'Welcome back, ' . (string) ($authenticatedUser['fullName'] ?? ($authenticatedUser['email'] ?? 'Account')) . '.'
+                        );
+                    }
+                }
+
+                if ($isAjax) {
+                    jsonResponse([
+                        'ok'       => true,
+                        'user'     => $authenticatedUser,
+                        'redirect' => 'home.php?role=' . $targetRole,
+                    ]);
+                }
+
+                redirect('home.php?role=' . $targetRole);
+            } catch (ValidationException $e) {
+                $error = $e->getMessage();
+                $fieldErrors = $e->getErrors();
+                if ($isAjax) {
+                    jsonResponse($e->toErrorPayload(), $e->getHttpStatusCode());
+                }
+            } catch (AuthenticationException|DatabaseException|AppException $e) {
+                $error = $e->getMessage();
+                if ($isAjax) {
+                    jsonResponse($e->toErrorPayload(), $e->getHttpStatusCode());
+                }
+            }
+        }
+
+        $store = $this->db->readStore();
+        require dirname(__DIR__, 2) . '/views/login.php';
+    }
+
+    /**
+     * Render the Logged-In Dashboard page (`home.php` -> `views/home.php`)
+     * and process server-side checkout / voucher verification POST requests.
+     */
+    public function home(): void
+    {
+        $user = currentUser();
+        if ($user === null || empty($user['email']) || empty($user['role'])) {
+            redirect('index.php');
+        }
+
+        $actualRole = strcasecmp((string) ($user['role'] ?? ''), 'Admin') === 0 ? 'admin' : 'client';
+        $requestedRole = strtolower(trim((string) ($_GET['role'] ?? '')));
+        if ($requestedRole === 'admin' && $actualRole !== 'admin') {
+            redirect('home.php?role=client');
+        }
+        if ($requestedRole === 'client' && $actualRole === 'admin') {
+            redirect('home.php?role=admin');
+        }
+
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '') === 'checkout') {
+            $customerEmail = trim((string) ($_POST['customerEmail'] ?? ($user['email'] ?? '')));
+            $voucherCode = isset($_POST['voucherCode']) ? trim((string) $_POST['voucherCode']) : null;
+            $rawItems = $_POST['cartItems'] ?? '[]';
+            $cartItems = is_string($rawItems) ? (json_decode($rawItems, true) ?: []) : (is_array($rawItems) ? $rawItems : []);
+
+            try {
+                $pricing = $this->productModel->calculateCartOrderWithVoucher(
+                    $cartItems,
+                    $voucherCode,
+                    $customerEmail
+                );
+                jsonResponse([
+                    'ok'      => true,
+                    'pricing' => $pricing,
+                ]);
+            } catch (ValidationException $e) {
+                jsonResponse([
+                    'ok'    => false,
+                    'error' => $e->getMessage(),
+                ], 422);
+            }
+        }
+
+        $store = $this->db->readStore();
+        $products = $this->productModel->getAll();
+        require dirname(__DIR__, 2) . '/views/home.php';
+    }
+
+    /**
+     * Clear the current user session and redirect to `index.php`.
+     */
+    public function logout(): never
+    {
+        $_SESSION = [];
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_destroy();
+        }
+        if (session_status() === PHP_SESSION_NONE) {
+            @session_start();
+        }
+        if (function_exists('setFlashMessage')) {
+            setFlashMessage(
+                'success',
+                'Logged Out Successfully',
+                'You have been safely signed out of your account.'
+            );
+        }
+        redirect('index.php?logged_out=1');
+    }
+}
