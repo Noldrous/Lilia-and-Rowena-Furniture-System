@@ -1,20 +1,24 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Lillia and Rowena Furniture
 
-# Run and deploy your AI Studio app
+Handcrafted solid timber and architectural furniture showroom, custom design portal, and workshop management system.
 
-This contains everything you need to run your app locally.
+## Architecture Overview
 
-View your app in AI Studio: https://ai.studio/apps/6e3883c2-e320-4f32-9cd8-f112925bfda1
+- **Storefront & Client Portal**: `index.html`, `catalog.html`, `login.html`, `dashboard.html`
+- **Frontend Modules**: `assets/js/` (`store.js`, `app.js`, `dashboard.js`, `login.js`, `analytics.js`, `feedback.js`)
+- **PHP Backend (PSR-4 & OOP)**:
+  - `src/App/Controllers/HomeControllers.php`
+  - `src/App/Models/` (`BaseModel.php`, `Product.php`, `StandardProduct.php`, `CustomizedProduct.php`, `User.php`, `AnalyticsReport.php`)
+  - `src/Library/` (`Database.php`, `OrderQueue.php`, `HashTable.php`, `OrderCompletion.php`, `Contracts/DataStructureInterface.php`, `Exceptions/AppException.php`)
+- **Database Schema (3NF)**: `database/furniture.sql`
 
-## Run Locally
+## Running Locally
 
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+1. Start the development server:
+   ```bash
+   npm run dev
+   ```
+2. Run the automated test suite:
+   ```bash
+   npm test
+   ```

@@ -34,7 +34,7 @@ class User extends BaseModel
             'role'         => 'Customer',
             'fullName'     => 'Rowena Vance',
             'email'        => 'rowena.vance@vancearchitects.com',
-            'passwordPlain'=> 'ClientPass2025!',
+            'passwordHash' => '$2y$10$abcdefghijklmnopqrstuur0t/7DuR7B.u/o560.Wa/80O.KsaL1e',
             'phoneNumber'  => '+1 (212) 555-0148',
             'address'      => 'Suite 400, 118 Mercer St, SoHo, New York, NY 10013',
         ],
@@ -44,7 +44,7 @@ class User extends BaseModel
             'role'         => 'Customer',
             'fullName'     => 'Julian Mercier',
             'email'        => 'j.mercier@mercierstudio.co',
-            'passwordPlain'=> 'ClientPass2025!',
+            'passwordHash' => '$2y$10$abcdefghijklmnopqrstuur0t/7DuR7B.u/o560.Wa/80O.KsaL1e',
             'phoneNumber'  => '+1 (212) 555-0164',
             'address'      => '45 Crosby St, Loft 3B, New York, NY 10012',
         ],
@@ -54,7 +54,7 @@ class User extends BaseModel
             'role'         => 'Customer',
             'fullName'     => 'Elena Rostova',
             'email'        => 'elena@rostovainteriors.com',
-            'passwordPlain'=> 'ClientPass2025!',
+            'passwordHash' => '$2y$10$abcdefghijklmnopqrstuur0t/7DuR7B.u/o560.Wa/80O.KsaL1e',
             'phoneNumber'  => '+1 (212) 555-0182',
             'address'      => '720 Park Ave, Apt 9A, New York, NY 10021',
         ],
@@ -64,7 +64,7 @@ class User extends BaseModel
             'role'         => 'Customer',
             'fullName'     => 'Marcus Sterling',
             'email'        => 'm.sterling@sterlingcapital.io',
-            'passwordPlain'=> 'ClientPass2025!',
+            'passwordHash' => '$2y$10$abcdefghijklmnopqrstuur0t/7DuR7B.u/o560.Wa/80O.KsaL1e',
             'phoneNumber'  => '+1 (212) 555-0199',
             'address'      => '15 Central Park West, New York, NY 10023',
         ],
@@ -74,7 +74,7 @@ class User extends BaseModel
             'role'         => 'Customer',
             'fullName'     => 'Clara Vance',
             'email'        => 'clara.vance@architects.io',
-            'passwordPlain'=> 'ClientPass2025!',
+            'passwordHash' => '$2y$10$abcdefghijklmnopqrstuur0t/7DuR7B.u/o560.Wa/80O.KsaL1e',
             'phoneNumber'  => '+1 (212) 555-0148',
             'address'      => '412 Mercer St, Penthouse B, New York, NY 10013',
         ],
@@ -84,7 +84,7 @@ class User extends BaseModel
             'role'         => 'Customer',
             'fullName'     => 'Julian Thorne',
             'email'        => 'j.thorne@studio-thorne.com',
-            'passwordPlain'=> 'ClientPass2025!',
+            'passwordHash' => '$2y$10$abcdefghijklmnopqrstuur0t/7DuR7B.u/o560.Wa/80O.KsaL1e',
             'phoneNumber'  => '+1 (415) 555-0193',
             'address'      => '88 Pacific Ave, San Francisco, CA 94111',
         ],
@@ -94,7 +94,7 @@ class User extends BaseModel
             'role'         => 'Admin',
             'fullName'     => 'Lillia Mercier (Business Owner)',
             'email'        => 'admin@lilliarowena.com',
-            'passwordPlain'=> 'MasterJoinery#01',
+            'passwordHash' => '$2y$10$abcdefghijklmnopqrstuuJRg8y9EE7NfJg/4gvxVqe0MzrBMkTy2',
             'phoneNumber'  => '+1 (212) 555-0100',
             'address'      => 'Lillia and Rowena Furniture Showroom, New York',
         ],
@@ -165,7 +165,7 @@ class User extends BaseModel
     }
 
     /**
-     * Authenticate a Customer or Admin by email and password.
+     * Authenticate a Customer or Admin by email and password using password_verify().
      *
      * @return array<string, mixed>
      * @throws ValidationException
@@ -183,20 +183,11 @@ class User extends BaseModel
         }
 
         $storedHash = (string) ($user['passwordHash'] ?? '');
-        $plainFallback = (string) ($user['passwordPlain'] ?? '');
-
-        $verified = false;
-        if ($storedHash !== '' && password_verify($password, $storedHash)) {
-            $verified = true;
-        } elseif ($plainFallback !== '' && hash_equals($plainFallback, $password)) {
-            $verified = true;
-        }
-
-        if (!$verified) {
+        if ($storedHash === '' || !password_verify($password, $storedHash)) {
             throw new AuthenticationException('Incorrect password for ' . $normalizedEmail . '.');
         }
 
-        unset($user['passwordHash'], $user['passwordPlain']);
+        unset($user['passwordHash']);
         return $user;
     }
 
@@ -219,9 +210,6 @@ class User extends BaseModel
                 if ($adminRow !== null) {
                     $adminRow['role'] = 'Admin';
                     $adminRow['fullName'] = 'Lillia Mercier (Admin)';
-                    if (($adminRow['passwordHash'] ?? '') === '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi') {
-                        $adminRow['passwordPlain'] = 'MasterJoinery#01';
-                    }
                     return $adminRow;
                 }
             }
@@ -234,9 +222,6 @@ class User extends BaseModel
                 );
                 if ($customerRow !== null) {
                     $customerRow['role'] = 'Customer';
-                    if (($customerRow['passwordHash'] ?? '') === '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi') {
-                        $customerRow['passwordPlain'] = 'ClientPass2025!';
-                    }
                     return $customerRow;
                 }
             }
@@ -334,7 +319,6 @@ class User extends BaseModel
                 'name'         => $fullName,
                 'email'        => $email,
                 'passwordHash' => $passwordHash,
-                'passwordPlain'=> $password,
                 'phoneNumber'  => $phoneNumber,
                 'phone'        => $phoneNumber,
                 'address'      => $address,
@@ -360,11 +344,7 @@ class User extends BaseModel
      */
     private function getAllSeedAndStoreUsers(): array
     {
-        $users = [];
-        foreach (self::DEFAULT_ACCOUNTS as $acc) {
-            $acc['passwordHash'] = password_hash((string) $acc['passwordPlain'], PASSWORD_DEFAULT);
-            $users[] = $acc;
-        }
+        $users = self::DEFAULT_ACCOUNTS;
 
         try {
             $store = $this->db->readStore();

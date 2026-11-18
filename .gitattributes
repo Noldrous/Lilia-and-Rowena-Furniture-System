@@ -10,5 +10,11 @@
 *.woff binary
 *.woff2 binary
 
+*.php linguist-language=PHP
 server.mjs linguist-vendored
-assets/js/store.test.js linguist-vendored
+package.json linguist-vendored
+metadata.json linguist-vendored
+assets/js/*.test.js linguist-vendored
+tests/** linguist-vendored
+vendor/** linguist-vendored
+

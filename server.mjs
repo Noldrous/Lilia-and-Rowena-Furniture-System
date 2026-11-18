@@ -8,6 +8,7 @@ import { computeMonthlyAnalyticsReport } from './assets/js/analytics.js';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import {
   computeVoucherStatusInfo,
@@ -20,6 +21,23 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PORT = Number(process.env.PORT || 3000);
+
+function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
+  const derived = crypto.scryptSync(String(password), salt, 32).toString('hex');
+  return `scrypt$${salt}$${derived}`;
+}
+
+function verifyPasswordHash(password, storedHash) {
+  const rawHash = String(storedHash || '');
+  if (!rawHash.startsWith('scrypt$')) return false;
+  const parts = rawHash.split('$');
+  if (parts.length !== 3) return false;
+  const [, salt, expectedHex] = parts;
+  const actualBuf = crypto.scryptSync(String(password), salt, 32);
+  const expectedBuf = Buffer.from(expectedHex, 'hex');
+  if (actualBuf.length !== expectedBuf.length) return false;
+  return crypto.timingSafeEqual(actualBuf, expectedBuf);
+}
 
 function loadSeedFromPhp() {
   const php = fs.readFileSync(path.join(__dirname, 'src', 'Library', 'Database.php'), 'utf8');
@@ -365,7 +383,7 @@ function handleApiRequest(req, res, parsedUrl) {
                   role: 'Admin',
                   fullName: 'Lillia Mercier (Business Owner)',
                   email: 'admin@lilliarowena.com',
-                  passwordPlain: 'MasterJoinery#01',
+                  passwordHash: 'scrypt$lr_admin_salt_v1$dafa75b58381f51d1628cdd0753995b08b0c3f5bdcf7cfac1cf3d9a2aac4e5ac',
                   phoneNumber: '+1 (212) 555-0100',
                   address: 'Lillia and Rowena Furniture Showroom, New York',
                 },
@@ -375,7 +393,7 @@ function handleApiRequest(req, res, parsedUrl) {
                   role: 'Customer',
                   fullName: 'Rowena Vance',
                   email: 'rowena.vance@vancearchitects.com',
-                  passwordPlain: 'ClientPass2025!',
+                  passwordHash: 'scrypt$lr_client_salt_v1$7d4aadc3d8afb5f2cf1f2b51e14b0aa2eba9976aaeaefd892cbcc548df99022c',
                   phoneNumber: '+1 (212) 555-0148',
                   address: 'Suite 400, 118 Mercer St, SoHo, New York, NY 10013',
                 },
@@ -385,7 +403,7 @@ function handleApiRequest(req, res, parsedUrl) {
                   role: 'Customer',
                   fullName: 'Julian Mercier',
                   email: 'j.mercier@mercierstudio.co',
-                  passwordPlain: 'ClientPass2025!',
+                  passwordHash: 'scrypt$lr_client_salt_v1$7d4aadc3d8afb5f2cf1f2b51e14b0aa2eba9976aaeaefd892cbcc548df99022c',
                   phoneNumber: '+1 (212) 555-0164',
                   address: '45 Crosby St, Loft 3B, New York, NY 10012',
                 },
@@ -395,7 +413,7 @@ function handleApiRequest(req, res, parsedUrl) {
                   role: 'Customer',
                   fullName: 'Elena Rostova',
                   email: 'elena@rostovainteriors.com',
-                  passwordPlain: 'ClientPass2025!',
+                  passwordHash: 'scrypt$lr_client_salt_v1$7d4aadc3d8afb5f2cf1f2b51e14b0aa2eba9976aaeaefd892cbcc548df99022c',
                   phoneNumber: '+1 (212) 555-0182',
                   address: '720 Park Ave, Apt 9A, New York, NY 10021',
                 },
@@ -405,7 +423,7 @@ function handleApiRequest(req, res, parsedUrl) {
                   role: 'Customer',
                   fullName: 'Marcus Sterling',
                   email: 'm.sterling@sterlingcapital.io',
-                  passwordPlain: 'ClientPass2025!',
+                  passwordHash: 'scrypt$lr_client_salt_v1$7d4aadc3d8afb5f2cf1f2b51e14b0aa2eba9976aaeaefd892cbcc548df99022c',
                   phoneNumber: '+1 (212) 555-0199',
                   address: '15 Central Park West, New York, NY 10023',
                 },
@@ -415,7 +433,7 @@ function handleApiRequest(req, res, parsedUrl) {
                   role: 'Customer',
                   fullName: 'Clara Vance',
                   email: 'clara.vance@architects.io',
-                  passwordPlain: 'ClientPass2025!',
+                  passwordHash: 'scrypt$lr_client_salt_v1$7d4aadc3d8afb5f2cf1f2b51e14b0aa2eba9976aaeaefd892cbcc548df99022c',
                   phoneNumber: '+1 (212) 555-0148',
                   address: '412 Mercer St, Penthouse B, New York, NY 10013',
                 },
@@ -425,7 +443,7 @@ function handleApiRequest(req, res, parsedUrl) {
                   role: 'Customer',
                   fullName: 'Julian Thorne',
                   email: 'j.thorne@studio-thorne.com',
-                  passwordPlain: 'ClientPass2025!',
+                  passwordHash: 'scrypt$lr_client_salt_v1$7d4aadc3d8afb5f2cf1f2b51e14b0aa2eba9976aaeaefd892cbcc548df99022c',
                   phoneNumber: '+1 (415) 555-0193',
                   address: '88 Pacific Ave, San Francisco, CA 94111',
                 },
@@ -444,7 +462,7 @@ function handleApiRequest(req, res, parsedUrl) {
                     ...mergedAccounts[existingIdx],
                     ...cust,
                     role: cust.role || mergedAccounts[existingIdx].role || 'Customer',
-                    passwordPlain: cust.passwordPlain || mergedAccounts[existingIdx].passwordPlain,
+                    passwordHash: cust.passwordHash || mergedAccounts[existingIdx].passwordHash,
                   };
                 } else {
                   mergedAccounts.push({
@@ -466,11 +484,7 @@ function handleApiRequest(req, res, parsedUrl) {
               }
 
               const isAccountAdmin = String(matchedAccount.role || '').toLowerCase() === 'admin';
-              const expectedPass =
-                matchedAccount.passwordPlain ||
-                (isAccountAdmin ? 'MasterJoinery#01' : 'ClientPass2025!');
-
-              if (password !== expectedPass) {
+              if (!verifyPasswordHash(password, matchedAccount.passwordHash)) {
                 return sendJson(res, 401, {
                   ok: false,
                   error: `Incorrect password for ${email}.`,
@@ -478,7 +492,6 @@ function handleApiRequest(req, res, parsedUrl) {
               }
 
               const sanitizedUser = { ...matchedAccount };
-              delete sanitizedUser.passwordPlain;
               delete sanitizedUser.passwordHash;
 
               if (isAccountAdmin) {
@@ -544,7 +557,7 @@ function handleApiRequest(req, res, parsedUrl) {
                 fullName,
                 name: fullName,
                 email,
-                passwordPlain: password,
+                passwordHash: hashPassword(password),
                 phoneNumber: phoneVal,
                 phone: phoneVal,
                 address: addressVal,

@@ -300,7 +300,7 @@ class Database
                 "INSERT IGNORE INTO Admin (AdminID, Email, PasswordHash) VALUES ('ADM-LR-901', :email, :hash)",
                 [
                     ':email' => 'admin@lilliarowena.com',
-                    ':hash'  => password_hash('MasterJoinery#01', PASSWORD_DEFAULT),
+                    ':hash'  => '$2y$10$abcdefghijklmnopqrstuuJRg8y9EE7NfJg/4gvxVqe0MzrBMkTy2',
                 ]
             );
 
@@ -314,7 +314,7 @@ class Database
                         ':id'    => $custId,
                         ':name'  => (string) ($cust['fullName'] ?? 'Rowena Vance'),
                         ':email' => (string) ($cust['email'] ?? 'rowena.vance@vancearchitects.com'),
-                        ':hash'  => password_hash('ClientPass2025!', PASSWORD_DEFAULT),
+                        ':hash'  => (string) ($cust['passwordHash'] ?? '$2y$10$abcdefghijklmnopqrstuur0t/7DuR7B.u/o560.Wa/80O.KsaL1e'),
                         ':phone' => (string) ($cust['phoneNumber'] ?? '+1 (212) 555-0148'),
                         ':addr'  => (string) ($cust['address'] ?? 'Suite 400, 118 Mercer St, SoHo, New York, NY 10013'),
                     ]

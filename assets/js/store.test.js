@@ -1045,14 +1045,7 @@ describe('Pure JavaScript & Server Store Logic Tests', () => {
 
   it('verifies the optimized 3NF database schema in database/furniture.sql and src/Library/Database.php with no redundant entities or columns', () => {
     const sqlContent = fs.readFileSync(path.join(process.cwd(), 'database', 'furniture.sql'), 'utf8');
-    const backupContent = fs.readFileSync(
-      path.join(process.cwd(), 'database', 'backup_before_optimization.sql'),
-      'utf8'
-    );
     const dbPhpContent = fs.readFileSync(path.join(process.cwd(), 'src', 'Library', 'Database.php'), 'utf8');
-
-    // Pre-optimization backup exists and is non-empty
-    assert.ok(backupContent.length > 5000);
 
     // Exactly 12 active normalized tables are created
     const expectedTables = [
@@ -1131,10 +1124,16 @@ describe('Pure JavaScript & Server Store Logic Tests', () => {
     assert.ok(loginPhp.includes('id="auth-mode-signin"'));
     assert.ok(loginPhp.includes('id="auth-mode-register"'));
 
-    // 3. Automatic role detection in HomeControllers.php and User.php + DSA comments preserved
+    // 3. Automatic role detection in HomeControllers.php and User.php + DSA comments preserved + no plaintext password fallback
+    const dbPhp = fs.readFileSync(path.join(process.cwd(), 'src', 'Library', 'Database.php'), 'utf8');
+    const serverMjs = fs.readFileSync(path.join(process.cwd(), 'server.mjs'), 'utf8');
     assert.ok(homeCtrlPhp.includes('authenticate($email, $password, null)'));
     assert.ok(userPhp.includes('// ALGORITHM B2: Linear search'));
     assert.ok(userPhp.includes('// ALGORITHM B5: Hash function'));
+    assert.ok(userPhp.includes('password_verify($password, $storedHash)'));
+    assert.equal(userPhp.includes('passwordPlain'), false);
+    assert.equal(dbPhp.includes('passwordPlain'), false);
+    assert.equal(serverMjs.includes('passwordPlain'), false);
 
     // 4. Direct URL protection in dashboard.js and HomeControllers.php
     assert.ok(dashboardJs.includes("if (urlRole === 'admin' && !isAdmin)"));

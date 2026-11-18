@@ -1,7 +1,6 @@
 -- =====================================================================
 -- Lillia and Rowena Furniture — Final Optimized 3NF MySQL / MariaDB Schema & Seed
 -- Database: `lillia_rowena_furniture` (InnoDB, utf8mb4_unicode_ci)
--- Pre-Optimization Backup: `database/backup_before_optimization.sql`
 --
 -- Active Entities (12 Normalized 3NF Tables — Non-Incrementing Code IDs):
 --   1. Admin                 (AdminID PK, Email UNIQUE, PasswordHash)
