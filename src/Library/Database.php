@@ -150,7 +150,7 @@ class Database
                 INDEX `idx_order_item_product` (`ProductID`),
                 FOREIGN KEY (`OrderID`) REFERENCES `Customer_Order`(`OrderID`) ON UPDATE CASCADE ON DELETE CASCADE,
                 FOREIGN KEY (`ProductID`) REFERENCES `Product`(`ProductID`) ON UPDATE CASCADE ON DELETE RESTRICT,
-                FOREIGN KEY (`VoucherID`, `ProductID`) REFERENCES `Voucher`(`VoucherID`, `ProductID`) ON UPDATE CASCADE ON DELETE SET NULL
+                FOREIGN KEY (`VoucherID`) REFERENCES `Voucher`(`VoucherID`) ON UPDATE CASCADE ON DELETE SET NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
             "CREATE TABLE IF NOT EXISTS `Order_Item_Material` (
                 `OrderItemID` VARCHAR(50) NOT NULL,
@@ -300,7 +300,7 @@ class Database
                 "INSERT IGNORE INTO Admin (AdminID, Email, PasswordHash) VALUES ('ADM-LR-901', :email, :hash)",
                 [
                     ':email' => 'admin@lilliarowena.com',
-                    ':hash'  => '$2y$10$abcdefghijklmnopqrstuuJRg8y9EE7NfJg/4gvxVqe0MzrBMkTy2',
+                    ':hash'  => password_hash('MasterJoinery#01', PASSWORD_DEFAULT),
                 ]
             );
 
@@ -314,7 +314,7 @@ class Database
                         ':id'    => $custId,
                         ':name'  => (string) ($cust['fullName'] ?? 'Rowena Vance'),
                         ':email' => (string) ($cust['email'] ?? 'rowena.vance@vancearchitects.com'),
-                        ':hash'  => (string) ($cust['passwordHash'] ?? '$2y$10$abcdefghijklmnopqrstuur0t/7DuR7B.u/o560.Wa/80O.KsaL1e'),
+                        ':hash'  => password_hash('ClientPass2025!', PASSWORD_DEFAULT),
                         ':phone' => (string) ($cust['phoneNumber'] ?? '+1 (212) 555-0148'),
                         ':addr'  => (string) ($cust['address'] ?? 'Suite 400, 118 Mercer St, SoHo, New York, NY 10013'),
                     ]

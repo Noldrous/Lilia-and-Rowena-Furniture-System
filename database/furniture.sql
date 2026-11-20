@@ -1,6 +1,7 @@
 -- =====================================================================
 -- Lillia and Rowena Furniture — Final Optimized 3NF MySQL / MariaDB Schema & Seed
 -- Database: `lillia_rowena_furniture` (InnoDB, utf8mb4_unicode_ci)
+-- Pre-Optimization Backup: `database/backup_before_optimization.sql`
 --
 -- Active Entities (12 Normalized 3NF Tables — Non-Incrementing Code IDs):
 --   1. Admin                 (AdminID PK, Email UNIQUE, PasswordHash)
@@ -191,8 +192,8 @@ CREATE TABLE `Order_Item` (
     CONSTRAINT `fk_order_item_product`
         FOREIGN KEY (`ProductID`) REFERENCES `Product`(`ProductID`)
         ON UPDATE CASCADE ON DELETE RESTRICT,
-    CONSTRAINT `fk_order_item_voucher_product`
-        FOREIGN KEY (`VoucherID`, `ProductID`) REFERENCES `Voucher`(`VoucherID`, `ProductID`)
+    CONSTRAINT `fk_order_item_voucher`
+        FOREIGN KEY (`VoucherID`) REFERENCES `Voucher`(`VoucherID`)
         ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
